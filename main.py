@@ -1,5 +1,6 @@
-import multiprocessing as mp
+from multiprocessing import Process
 import json
+from Node import *
 
 
 def print_soic():
@@ -29,12 +30,21 @@ def parse_configuration(config, base_port=5000):
     return configuration_list
 
 
+def run_single_node(pub, sub):
+    node = Node(sub, pub)
+    node.run()
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     print_soic()
     raw_configuration = read_config()
     configuration = parse_configuration(raw_configuration)
-    # subprocess.run("python Node.py --sub 5001")
-    # subprocess.run("python Node.py --pub 5001")
+    processes = []
+    for c in configuration:
+        p = Process(target=run_single_node, args=(c[0], c[1]))
+        p.start()
+        processes.append(p)
 
-    # multiprocess
+    # for p in processes:
+    #     p.join()
