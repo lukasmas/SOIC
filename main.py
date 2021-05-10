@@ -41,7 +41,7 @@ if __name__ == '__main__':
     print_soic()
     raw_configuration = read_config()
     configuration = parse_configuration(raw_configuration)
-    msg_count = 3
+    msg_count = 1
     supervisor = Supervisor(msg_count, len(configuration))
     processes = []
 
