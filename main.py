@@ -41,7 +41,7 @@ if __name__ == '__main__':
     print_soic()
     raw_configuration = read_config()
     configuration = parse_configuration(raw_configuration)
-    msg_count = 1
+    msg_count = 90
     supervisor = Supervisor(msg_count, len(configuration))
     processes = []
 
@@ -56,3 +56,5 @@ if __name__ == '__main__':
     print()
     print()
     supervisor.get_results()
+
+ #statystyki i uszkdzanie ramki

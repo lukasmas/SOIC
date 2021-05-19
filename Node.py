@@ -1,6 +1,5 @@
 import signal
 import time
-from typing import Set
 
 import zmq
 from enum import Enum
@@ -13,10 +12,6 @@ class NodeType(Enum):
     Both = 3
     Null = 0
 
-
-# class MsgCodes(Enum):
-#     Normal: int = 0x0
-#     Broadcast: int = 0xAA
 
 def find_shortest_path(graph, start, end, path=[]):
     path = path + [start]
@@ -82,7 +77,7 @@ class Node:
                     self.msg_list.append(msg.msg_id)
                     self.responses.put(msg.msg_id)
                     print(
-                        f'{self.pub_port} : Msg {msg.msg_id} from {msg.id_sender} delivered: {msg.msg}, resp_q : {self.responses.qsize()}')
+                       f'{self.pub_port} : Msg {msg.msg_id} from {msg.id_sender} delivered: {msg.msg}, resp_q : {self.responses.qsize()}')
             else:
                 if msg.ttl > 0 and msg.next_receiver == self.pub_port:
                     msg.next_receiver = find_next_node(self.connections, self.pub_port, msg.id_receiver)
@@ -90,7 +85,7 @@ class Node:
 
         if msg.msg_code == 0xAA:
             if msg.ttl > 0:
-                temp_cons = msg.msg.split(';')
+                temp_cons = msg.msg.split(';')  # change to int
                 for i in range(len(temp_cons) - 1):
                     if int(temp_cons[i]) not in self.connections:
                         self.connections[int(temp_cons[i])] = [int(temp_cons[i + 1])]
@@ -99,11 +94,6 @@ class Node:
                             self.connections[int(temp_cons[i])].append(int(temp_cons[i + 1]))
                 msg.msg = f'{msg.msg};{self.pub_port}'
                 self.pub_socket.send(code_msg(msg))
-            # else:
-            #     if self.pub_port == 5000:
-            #         f = open("demofile2.txt", "w")
-            #         f.write(str(self.connections))
-            #         f.close()
 
     def send_msg(self):
         if not self.qtask.empty():
@@ -117,6 +107,8 @@ class Node:
             message = dict(self.poller.poll(1000))
             if message.get(self.sub_socket) == zmq.POLLIN:
                 msg = decode_msg(self.sub_socket.recv(zmq.NOBLOCK))
+                if msg == -1:
+                    continue
                 self.process_msg(msg)
                 self.no_msg_in_row = 0
             else:
@@ -129,3 +121,5 @@ class Node:
         time.sleep(1)
         broadcast_msg = code_new_msg(0xAA, self.pub_port, 0, 0, self.pub_port, str(self.pub_port))
         self.pub_socket.send(broadcast_msg)
+
+        # co jakis czas wyslac jeszcze raz, nowe nody
