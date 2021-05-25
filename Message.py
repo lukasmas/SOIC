@@ -1,10 +1,7 @@
 import string
 import struct
 from dataclasses import dataclass
-from random import choices, randrange
 
-population = [1, 2]
-weights = [0.01, 0.99]
 
 
 @dataclass
@@ -23,23 +20,6 @@ class Message:
         return 'h h h h h 114s h h'
 
 
-def draw_noise(coded_msg):
-    if choices(population, weights)[0] == 1:
-        index = randrange(0, 127)
-        bit = randrange(0, 7)
-
-        modified = coded_msg[index] ^ bit
-        coded_new = b''
-        for i in range(128):
-            if i == index:
-                coded_new = coded_new + bytes([modified])
-                continue
-            coded_new = coded_new + bytes([coded_msg[i]])
-        return coded_new
-
-    return coded_msg
-
-
 def code_new_msg(msg_code: int, id_sender: int, id_receiver: int, next_receiver: int, id: int, msg: string):
     ttl = 10
     coded = struct.pack(Message.get_byte_pattern(), msg_code, id, id_sender, id_receiver, next_receiver,
@@ -48,7 +28,7 @@ def code_new_msg(msg_code: int, id_sender: int, id_receiver: int, next_receiver:
     coded = struct.pack(Message.get_byte_pattern(), msg_code, id, id_sender, id_receiver, next_receiver,
                         str.encode(msg), ttl, checksum)
 
-    return draw_noise(coded)
+    return coded
 
 
 def code_msg(msg: Message):
@@ -59,7 +39,7 @@ def code_msg(msg: Message):
     coded = struct.pack(Message.get_byte_pattern(), msg.msg_code, msg.msg_id, msg.id_sender, msg.id_receiver,
                         msg.next_receiver, str.encode(msg.msg), msg.ttl, checksum)
 
-    return draw_noise(coded)
+    return coded
 
 
 def decode_msg(coded_msg):

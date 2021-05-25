@@ -20,6 +20,7 @@ class Supervisor:
         self.queue_list = []
         self.msg_count = msg_count
         self.node_count = node_count
+        self.netModules = dict()
 
     @staticmethod
     def unique_id():
@@ -28,7 +29,7 @@ class Supervisor:
             yield seed
             seed += 1
 
-    def generate_task(self, port, tasks):
+    def generate_task(self, port, tasks, new_node = True):
         for i in range(self.msg_count):
             msg = RawMsg(0, 0, "")
             msg.destination = self.generate_dest_port(port)
@@ -37,7 +38,8 @@ class Supervisor:
             self.task_list.append(msg.msg_id)
             tasks.put(msg)
 
-        self.queue_list.append(tasks)
+        if new_node:
+            self.queue_list.append([port, tasks])
 
     def generate_dest_port(self, port, base_port=5000):
         dest = base_port + randrange(self.node_count)
@@ -53,3 +55,7 @@ class Supervisor:
                 msg_delivered = msg_delivered + 1
 
         print(f'Msg delivered: {msg_delivered} / {len(self.task_list)} ')
+
+    def generate_new_tasks(self):
+        for q in self.queue_list:
+            self.generate_task(q[0], q[1], False)
