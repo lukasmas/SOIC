@@ -1,10 +1,20 @@
-from multiprocessing import Process
+from multiprocessing import Process, Manager
+from multiprocessing.managers import BaseManager
 import json
 
 from Node import *
 from Supervisor import *
 from NetworkModule import *
 import time
+from StatisticsCollector import *
+
+
+@dataclass
+class Queues:
+    tasks: Queue
+    net_module_q: Queue
+    responses: Queue
+    stats: Queue
 
 
 def print_soic():
@@ -19,7 +29,7 @@ def read_config():
 
 def generate_connections(last_id):
     nodes = last_id - 5000
-    count = randrange(int(nodes / 2))
+    count = randrange(1, int(nodes / 2))
     subs = []
     for i in range(count):
         sub = randrange(5000, last_id)
@@ -61,9 +71,9 @@ def parse_configuration(config, base_port=5000):
     return configuration_list
 
 
-def run_single_node(pub, sub, tasks, responses, net_modules_q):
-    net_module = NetworkModule(sub, pub, net_modules_q)
-    node = Node(pub, net_module, tasks, responses)
+def run_single_node(pub, sub, queues):
+    net_module = NetworkModule(sub, pub, queues.net_module_q, queues.stats)
+    node = Node(pub, net_module, queues.tasks, queues.responses, queues.stats)
     node.run()
 
 
@@ -74,6 +84,12 @@ if __name__ == '__main__':
     last_node_id = configuration[-1][0]
     msg_count = 10
     supervisor = Supervisor(msg_count, len(configuration))
+    stats_queue = Queue()
+    # BaseManager.register('Statistics', Statistics)
+    manager = Manager()
+    # manager.start()
+    statistics = manager.dict()
+    statistics_collector = StatisticsCollector(stats_queue, statistics)
     processes = []
 
     print('Running with default configuration...')
@@ -84,12 +100,16 @@ if __name__ == '__main__':
         que = c[2]
         supervisor.generate_task(pub, que)
         supervisor.netModules[pub] = Queue()
-        p = Process(target=run_single_node, args=(pub, sub, que, supervisor.response_queue, supervisor.netModules[pub]))
+        statistics_collector.add_stats(pub)
+        queues = Queues(que, supervisor.netModules[pub], supervisor.response_queue, stats_queue)
+        p = Process(target=run_single_node,
+                    args=(pub, sub, queues))
         p.start()
         processes.append(p)
 
     time.sleep(1)
     while True:
+
         print("1. Add node")
         print("2. Remove node")
         print("3. Generate new msg")
@@ -105,10 +125,32 @@ if __name__ == '__main__':
         if opt == 1:
             subs = add_node(last_node_id)
             last_node_id = last_node_id + 1
+            statistics_collector.add_stats(last_node_id)
             supervisor.node_count = supervisor.node_count + 1
+            notif = NetModuleMsg("add", last_node_id)
             for n in supervisor.netModules:
                 if n in subs:
-                    supervisor.netModules[n].put(last_node_id)
+                    supervisor.netModules[n].put(notif)
+
+        if opt == 2:
+            print("Choose nodeId: ")
+
+            node = None
+            found = False
+            try:
+                node = int(input())
+                for n in supervisor.queue_list:
+                    if n[0] == node:
+                        found = True
+                if not found:
+                    print("Node is not in the list!")
+                    break
+                notif = NetModuleMsg("delete", node)
+                for n in supervisor.netModules:
+                    supervisor.netModules[n].put(notif)
+            except:
+                print("Wrong")
+                continue
 
         if opt == 3:
             supervisor.generate_new_tasks()
@@ -116,23 +158,31 @@ if __name__ == '__main__':
 
         if opt == 4:
             is_all_empty = True
+            q_size = 0
             for q in supervisor.queue_list:
                 if not q[1].empty():
+                    q_size = q_size + q[1].qsize()
                     is_all_empty = False
 
             if is_all_empty:
                 print("Finishing the simulation ... ")
+                statistics_collector.update_stats()
+                supervisor.get_results()
+                print()
+                statistics_collector.print_stats()
                 for p in processes:
                     # p.join()
                     p.kill()
                 break
             if not is_all_empty:
-                print('not all tasks are done')
-
+                print(f'not all tasks are done, left task: {q_size} ')
 
     print()
-    print()
+    print("From main")
 
-    supervisor.get_results()
+    for s in statistics:
+        print()
+        print(f'{s}: {statistics.get(s).damage_statistics}')
+        print(f'{s}: {statistics.get(s).sent_statistics}')
 
 # statystyki i uszkdzanie ramki

@@ -3,6 +3,7 @@ import struct
 from dataclasses import dataclass
 
 
+# rozdział o ramce
 
 @dataclass
 class Message:
@@ -57,8 +58,14 @@ def decode_msg(coded_msg):
     return msg
 
 # typ rozgłoszenia: fizyczny odbiorca na podstawie grafu : port // odległy o jeden
-
 # typ rozgłoszeni: fizyczny odbiorca na podstawie grafu : port // odległy o jeden done
 # dodac grafy done
 # rozszerzyc wiadomość o odbiorce done
 # poprawić
+
+# potwierdzenie odebrania
+# usuwanie node - badanie
+# dlugosc drogi, liczba uszkodzonych wiadomości, uszkadzanie sieci i powrot do zycia, badanie co jesli nie ma trasy
+# obciązenie wezłow, wezly traktowane jako przekazniki
+
+# przedluzenie
