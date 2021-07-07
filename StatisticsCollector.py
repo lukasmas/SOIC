@@ -28,8 +28,8 @@ class Statistics:
 
 
 class StatisticsCollector:
-    def __init__(self, queue, statistics):
-        self.statistics = statistics
+    def __init__(self, queue):
+        self.statistics = dict()
         self.stats_queue = queue
         # self.test = statistics
 
@@ -59,3 +59,7 @@ class StatisticsCollector:
 #algorytm z literatury
 
 #next week algorytm do balansowania ruchu
+
+#czysczenie wag
+#reinicjalizacja wag
+

@@ -1,7 +1,5 @@
 import time
 
-import zmq
-
 from Message import *
 import logging
 from Supervisor import RawMsg
@@ -42,6 +40,7 @@ class Node:
         self.last_localization_time = None
         self.new_search_period = 60
         self.pause_for_searching = 5
+        self.resend_time = 10
         self.netModule = network_module
         self.localization_done = False
         self.last_broadcast_msg = None
@@ -55,8 +54,6 @@ class Node:
         time.sleep(1)
         self.localize_other_nodes()
         self.timeout()
-
-
 
     def process_msg(self, msg):
         if msg.msg_code == 0x0:
@@ -84,7 +81,7 @@ class Node:
         if msg.msg_code == 0x1:
             if msg.id_receiver == self.pub_port:
                 for m in self.msg_sent:
-                    if msg.msg_id == m.msg_id:
+                    if msg.msg_id == m['msg'].msg_id:
                         self.msg_sent.remove(m)
                         logging.info(f'{self.pub_port}: msg without conf {len(self.msg_sent)} ')
             else:
@@ -122,7 +119,7 @@ class Node:
                 print(f'{self.pub_port}: brak id w con {task.destination}')
             else:
                 next_node = find_next_node(self.connections, self.pub_port, task.destination)
-            self.msg_sent.append(RawMsg(task.msg_id, task.destination, task.msg))
+            self.msg_sent.append({'msg': RawMsg(task.msg_id, task.destination, task.msg), 'time': time.time()})
             msg_to_send = code_new_msg(0x0, self.pub_port, task.destination, next_node, task.msg_id, task.msg)
             self.netModule.send_msg(msg_to_send)
 
@@ -144,6 +141,12 @@ class Node:
                 self.no_msg_in_row = 0
             else:
                 if self.localization_done:
+                    # if self.pub_port == 5000:
+                    #     nx.nx.draw(self.connections)
+                    for m in self.msg_sent:
+                        if time.time() - m['time'] >= self.resend_time:
+                            self.qtask.put(m['msg'])
+                            self.msg_sent.remove(m)
                     self.send_msg()
 
             # logging.info(f'{self.pub_port}: messages sent / forwarded {self.number_of_send} / {self.number_of_fwd}')

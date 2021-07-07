@@ -39,14 +39,15 @@ def generate_connections(last_id):
     return subs
 
 
-def add_node(node_id):
+def add_node(node_id, stats_queue):
     q = Queue()
     new_id = node_id + 1
     supervisor.generate_task(new_id, q)
     subs = generate_connections(node_id)
     supervisor.netModules[new_id] = Queue()
+    queues = Queues(q, supervisor.netModules[new_id], supervisor.response_queue, stats_queue)
     new_p = Process(target=run_single_node,
-                    args=(new_id, subs, q, supervisor.response_queue, supervisor.netModules[new_id]))
+                    args=(new_id, subs, queues))
     new_p.start()
     processes.append(new_p)
     print(
@@ -85,11 +86,11 @@ if __name__ == '__main__':
     msg_count = 10
     supervisor = Supervisor(msg_count, len(configuration))
     stats_queue = Queue()
-    # BaseManager.register('Statistics', Statistics)
-    manager = Manager()
-    # manager.start()
-    statistics = manager.dict()
-    statistics_collector = StatisticsCollector(stats_queue, statistics)
+    BaseManager.register('Statistics', Statistics)
+    manager = BaseManager()
+    manager.start()
+    statistics = manager.Statistics()
+    statistics_collector = StatisticsCollector(stats_queue)
     processes = []
 
     print('Running with default configuration...')
@@ -123,7 +124,7 @@ if __name__ == '__main__':
             continue
 
         if opt == 1:
-            subs = add_node(last_node_id)
+            subs = add_node(last_node_id, stats_queue)
             last_node_id = last_node_id + 1
             statistics_collector.add_stats(last_node_id)
             supervisor.node_count = supervisor.node_count + 1
@@ -178,11 +179,6 @@ if __name__ == '__main__':
                 print(f'not all tasks are done, left task: {q_size} ')
 
     print()
-    print("From main")
-
-    for s in statistics:
-        print()
-        print(f'{s}: {statistics.get(s).damage_statistics}')
-        print(f'{s}: {statistics.get(s).sent_statistics}')
+    print()
 
 # statystyki i uszkdzanie ramki
